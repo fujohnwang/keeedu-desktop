@@ -5,6 +5,7 @@ import javafx.application.Application
 import javafx.beans.value.{ChangeListener, ObservableValue}
 import javafx.concurrent.Worker
 import javafx.concurrent.Worker.State
+import javafx.event.{ActionEvent, EventHandler}
 import javafx.geometry.{Insets, Pos}
 import javafx.scene.Scene
 import javafx.scene.control.{Button, Label, TextField}
@@ -13,14 +14,26 @@ import javafx.scene.text.Font
 import javafx.scene.web.WebView
 import javafx.stage.Stage
 
+import java.io.File
+import java.nio.charset.StandardCharsets
+import java.nio.file.{Files, Paths}
+
 
 class KeeeduDesktop extends Application {
+  private val cachedLinkRepositoryFile: File = new File(System.getProperty("user.home"), "keeedu_magic_link.txt")
+
   override def start(stage: Stage): Unit = {
     val pane = new BorderPane()
     val scene = new Scene(pane)
     scene.getStylesheets.add(getClass.getResource("/css/style.css").toExternalForm)
 
-    createAuthView(scene, pane)
+    if (cachedLinkRepositoryFile.exists()) {
+      val link = Files.readString(cachedLinkRepositoryFile.toPath, StandardCharsets.UTF_8).trim
+      switchToWebView(scene, link)
+    } else {
+      createAuthView(scene, pane)
+    }
+
 
     stage.setScene(scene)
     stage.setFullScreen(true)
@@ -46,15 +59,19 @@ class KeeeduDesktop extends Application {
 
     val input = new TextField()
     input.setFont(Fonts.defaultFont())
+
     val button = new Button("确认")
     button.setFont(Fonts.defaultFont())
     button.setMinWidth(200)
     button.setMinHeight(36)
-    button.setOnAction(_ => {
+
+    val action: EventHandler[ActionEvent] = _ => {
       if (!(input.getText == null || input.getText.isEmpty)) {
         switchToWebView(scene, input.getText.trim)
       }
-    })
+    }
+    input.setOnAction(action)
+    button.setOnAction(action)
 
     val layout = new VBox(20)
     layout.setSpacing(10)
@@ -78,7 +95,9 @@ class KeeeduDesktop extends Application {
     webv.getEngine.getLoadWorker.stateProperty().addListener(new ChangeListener[State] {
       override def changed(observableValue: ObservableValue[_ <: State], oldState: State, newState: State): Unit = {
         if (newState == Worker.State.SUCCEEDED) {
-          //          println(s"url:${webv.getEngine.getLocation} loaded successfully.")
+          if (cachedLinkRepositoryFile.createNewFile()) {
+            Files.writeString(cachedLinkRepositoryFile.toPath, url, StandardCharsets.UTF_8)
+          }
         }
 
       }
