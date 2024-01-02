@@ -64,3 +64,5 @@ pkg/
 *.dmg
 macpkg.sh
 dependency-reduced-pom.xml
+jdeploy-bundle/
+jdeploy/
